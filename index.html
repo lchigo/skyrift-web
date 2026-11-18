@@ -1,220 +1,138 @@
 <!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
-		<title>星裂突击 SkyRift</title>
-		<style>
-html, body, #canvas {
-	margin: 0;
-	padding: 0;
-	border: 0;
-}
-
-body {
-	color: white;
-	background-color: black;
-	overflow: hidden;
-	touch-action: none;
-}
-
-#canvas {
-	display: block;
-}
-
-#canvas:focus {
-	outline: none;
-}
-
-#status, #status-splash, #status-progress {
-	position: absolute;
-	left: 0;
-	right: 0;
-}
-
-#status, #status-splash {
-	top: 0;
-	bottom: 0;
-}
-
-#status {
-	background-color: #ffffff;
-	display: flex;
-	flex-direction: column;
-	justify-content: center;
-	align-items: center;
-	visibility: hidden;
-}
-
-#status-splash {
-	max-height: 100%;
-	max-width: 100%;
-	margin: auto;
-}
-
-#status-splash.show-image--false {
-	display: none;
-}
-
-#status-splash.fullsize--true {
-	height: 100%;
-	width: 100%;
-	object-fit: contain;
-}
-
-#status-splash.use-filter--false {
-	image-rendering: pixelated;
-}
-
-#status-progress, #status-notice {
-	display: none;
-}
-
-#status-progress {
-	bottom: 10%;
-	width: 50%;
-	margin: 0 auto;
-}
-
-#status-notice {
-	background-color: #5b3943;
-	border-radius: 0.5rem;
-	border: 1px solid #9b3943;
-	color: #e0e0e0;
-	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
-	line-height: 1.3;
-	margin: 0 2rem;
-	overflow: hidden;
-	padding: 1rem;
-	text-align: center;
-	z-index: 1;
-}
-		</style>
-		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>星裂突击 SkyRift</title>
+  <style>
+    html, body, #canvas { margin: 0; padding: 0; border: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #fff; }
+    body { touch-action: none; font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; }
+    #canvas { display: block; width: 100vw !important; height: 100vh !important; height: 100dvh !important; }
+    #canvas:focus { outline: none; }
+    #status {
+      position: fixed; inset: 0; z-index: 10; display: flex;
+      align-items: center; justify-content: center; background: #fff; color: #16283b;
+    }
+    .loading-panel { width: min(380px, calc(100% - 48px)); }
+    .wordmark { margin: 0 0 10px; color: #78909e; font-size: 12px; font-weight: 650; letter-spacing: .3em; }
+    h1 { margin: 0 0 32px; font-size: 25px; font-weight: 650; letter-spacing: .06em; }
+    .progress-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .stage-label { display: flex; align-items: center; gap: 9px; font-size: 14px; }
+    #status-percent { color: #008da9; font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    #status-progress { display: block; width: 100%; height: 9px; border: 0; border-radius: 9px; overflow: hidden; appearance: none; background: #e9f0f3; accent-color: #009db8; }
+    #status-progress::-webkit-progress-bar { background: #e9f0f3; border-radius: 9px; }
+    #status-progress::-webkit-progress-value { background: linear-gradient(90deg, #00b8c6, #008cae); border-radius: 9px; transition: width .12s linear; }
+    #status-progress::-moz-progress-bar { background: #009db8; border-radius: 9px; }
+    #status-detail { min-height: 20px; margin: 13px 0 0; color: #738491; font-size: 12px; line-height: 1.6; font-variant-numeric: tabular-nums; }
+    .spinner { flex: 0 0 auto; width: 12px; height: 12px; box-sizing: border-box; border: 2px solid #d9ebf0; border-top-color: #009db8; border-radius: 50%; animation: spin .85s linear infinite; }
+    #status[data-state="download"] .spinner { display: none; }
+    #status[data-state="error"] .spinner, #status[data-state="error"] #status-progress { display: none; }
+    #status-retry { margin-top: 18px; padding: 10px 23px; border: 1px solid #b7dbe2; border-radius: 7px; background: #f3fafb; color: #007f99; font: inherit; font-size: 14px; cursor: pointer; touch-action: manipulation; }
+    #status-retry:hover { background: #e7f5f8; }
+    #status-retry:focus-visible { outline: 2px solid #008da9; outline-offset: 3px; }
+    noscript { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 24px; background: #fff; color: #16283b; text-align: center; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } #status-progress::-webkit-progress-value { transition: none; } }
+  </style>
+  <link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
-<meta name="theme-color" content="#ffffff"><style>html,body{width:100%;height:100%;background:#fff;overflow:hidden;}#canvas{display:block;width:100vw!important;height:100vh!important;height:100dvh!important;}#status{color:#15263c;background:#fff;}#status-progress{accent-color:#009bba;}</style>
-	</head>
-	<body>
-		<canvas id="canvas">
-			Your browser does not support the canvas tag.
-		</canvas>
+<meta name="theme-color" content="#ffffff">
+</head>
+<body>
+  <canvas id="canvas" aria-label="星裂突击游戏画面">当前浏览器不支持游戏画布。</canvas>
+  <noscript>请启用 JavaScript 后重新打开游戏。</noscript>
+  <main id="status" data-state="connecting" aria-busy="true">
+    <section class="loading-panel" aria-labelledby="loading-title">
+      <p class="wordmark">SKYRIFT</p>
+      <h1 id="loading-title">星裂突击</h1>
+      <div class="progress-row">
+        <span class="stage-label"><span class="spinner" aria-hidden="true"></span><span id="status-stage" role="status">正在连接游戏资源</span></span>
+        <span id="status-percent" aria-hidden="true">…</span>
+      </div>
+      <progress id="status-progress" max="100" aria-label="游戏资源下载进度"></progress>
+      <p id="status-detail">请保持页面打开</p>
+      <button id="status-retry" type="button" hidden>重新加载</button>
+    </section>
+  </main>
+  <script>
+    const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":30718148,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+    const GODOT_THREADS_ENABLED = false;
+    (() => {
+      const overlay = document.getElementById('status');
+      const progress = document.getElementById('status-progress');
+      const stage = document.getElementById('status-stage');
+      const percent = document.getElementById('status-percent');
+      const detail = document.getElementById('status-detail');
+      const retry = document.getElementById('status-retry');
+      let state = 'loading';
 
-		<noscript>
-			Your browser does not support JavaScript.
-		</noscript>
+      function fail(error, message = '游戏文件未能载入，请检查网络后重试。') {
+        if (state !== 'loading') return;
+        state = 'error';
+        console.error(error);
+        overlay.dataset.state = 'error';
+        overlay.setAttribute('aria-busy', 'false');
+        stage.textContent = '加载遇到问题';
+        percent.textContent = '';
+        detail.textContent = message;
+        retry.hidden = false;
+      }
 
-		<div id="status">
-			<img id="status-splash" class="show-image--false fullsize--true use-filter--true" src="index.png" alt="">
-			<progress id="status-progress"></progress>
-			<div id="status-notice"></div>
-		</div>
+      function onProgress(current, total) {
+        if (state !== 'loading') return;
+        const loaded = Number.isFinite(current) ? Math.max(0, current) : 0;
+        if (!Number.isFinite(total) || total <= 0) {
+          overlay.dataset.state = 'loading';
+          stage.textContent = '正在下载游戏资源';
+          progress.removeAttribute('value');
+          progress.removeAttribute('aria-valuetext');
+          percent.textContent = '…';
+          detail.textContent = loaded > 0 ? `已下载 ${(loaded / 1000000).toFixed(1)} MB` : '请保持页面打开';
+          return;
+        }
+        const ratio = Math.min(1, loaded / total);
+        progress.value = ratio * 100;
+        if (ratio < 1) {
+          const value = Math.floor(ratio * 100);
+          overlay.dataset.state = 'download';
+          stage.textContent = '正在下载游戏资源';
+          percent.textContent = `${value}%`;
+          progress.setAttribute('aria-valuetext', `已下载 ${value}%`);
+          detail.textContent = `已下载 ${(loaded / 1000000).toFixed(1)} / ${(total / 1000000).toFixed(1)} MB`;
+        } else {
+          overlay.dataset.state = 'preparing';
+          stage.textContent = '正在准备游戏';
+          percent.textContent = '已下载';
+          progress.setAttribute('aria-valuetext', '下载已完成，正在准备游戏');
+          detail.textContent = '资源已下载，正在完成启动';
+        }
+      }
 
-		<script src="index.js"></script>
-		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":30718148,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
-const GODOT_THREADS_ENABLED = false;
-const engine = new Engine(GODOT_CONFIG);
-
-(function () {
-	const statusOverlay = document.getElementById('status');
-	const statusProgress = document.getElementById('status-progress');
-	const statusNotice = document.getElementById('status-notice');
-
-	let initializing = true;
-	let statusMode = '';
-
-	function setStatusMode(mode) {
-		if (statusMode === mode || !initializing) {
-			return;
-		}
-		if (mode === 'hidden') {
-			statusOverlay.remove();
-			initializing = false;
-			return;
-		}
-		statusOverlay.style.visibility = 'visible';
-		statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
-		statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
-		statusMode = mode;
-	}
-
-	function setStatusNotice(text) {
-		while (statusNotice.lastChild) {
-			statusNotice.removeChild(statusNotice.lastChild);
-		}
-		const lines = text.split('\n');
-		lines.forEach((line) => {
-			statusNotice.appendChild(document.createTextNode(line));
-			statusNotice.appendChild(document.createElement('br'));
-		});
-	}
-
-	function displayFailureNotice(err) {
-		console.error(err);
-		if (err instanceof Error) {
-			setStatusNotice(err.message);
-		} else if (typeof err === 'string') {
-			setStatusNotice(err);
-		} else {
-			setStatusNotice('An unknown error occurred.');
-		}
-		setStatusMode('notice');
-		initializing = false;
-	}
-
-	const missing = Engine.getMissingFeatures({
-		threads: GODOT_THREADS_ENABLED,
-	});
-
-	if (missing.length !== 0) {
-		if (GODOT_CONFIG['serviceWorker'] && GODOT_CONFIG['ensureCrossOriginIsolationHeaders'] && 'serviceWorker' in navigator) {
-			let serviceWorkerRegistrationPromise;
-			try {
-				serviceWorkerRegistrationPromise = navigator.serviceWorker.getRegistration();
-			} catch (err) {
-				serviceWorkerRegistrationPromise = Promise.reject(new Error('Service worker registration failed.'));
-			}
-			// There's a chance that installing the service worker would fix the issue
-			Promise.race([
-				serviceWorkerRegistrationPromise.then((registration) => {
-					if (registration != null) {
-						return Promise.reject(new Error('Service worker already exists.'));
-					}
-					return registration;
-				}).then(() => engine.installServiceWorker()),
-				// For some reason, `getRegistration()` can stall
-				new Promise((resolve) => {
-					setTimeout(() => resolve(), 2000);
-				}),
-			]).then(() => {
-				// Reload if there was no error.
-				window.location.reload();
-			}).catch((err) => {
-				console.error('Error while registering service worker:', err);
-			});
-		} else {
-			// Display the message as usual
-			const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
-			displayFailureNotice(missingMsg + missing.join('\n'));
-		}
-	} else {
-		setStatusMode('progress');
-		engine.startGame({
-			'onProgress': function (current, total) {
-				if (current > 0 && total > 0) {
-					statusProgress.value = current;
-					statusProgress.max = total;
-				} else {
-					statusProgress.removeAttribute('value');
-					statusProgress.removeAttribute('max');
-				}
-			},
-		}).then(() => {
-			setStatusMode('hidden');
-		}, displayFailureNotice);
-	}
-}());
-		</script>
-	</body>
+      retry.addEventListener('click', () => window.location.reload());
+      const script = document.createElement('script');
+      script.src = 'index.js';
+      script.addEventListener('error', () => fail(new Error('Engine script failed to load.')));
+      script.addEventListener('load', () => {
+        Promise.resolve().then(() => {
+          const missing = Engine.getMissingFeatures({ threads: GODOT_THREADS_ENABLED });
+          if (missing.length) {
+            fail(new Error(`Missing browser features: ${missing.join(', ')}`), '当前浏览器暂不支持此游戏，请更新浏览器后重试。');
+            return;
+          }
+          const engine = new Engine(GODOT_CONFIG);
+          return engine.startGame({ onProgress }).then(() => {
+            if (state !== 'loading') return;
+            state = 'started';
+            overlay.setAttribute('aria-busy', 'false');
+            // Give the canvas two paint opportunities before removing the white loading page.
+            requestAnimationFrame(() => requestAnimationFrame(() => overlay.remove()));
+          });
+        }).catch(fail);
+      });
+      document.body.appendChild(script);
+    })();
+  </script>
+</body>
 </html>
 
