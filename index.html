@@ -20,10 +20,11 @@
     .progress-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
     .stage-label { display: flex; align-items: center; gap: 9px; font-size: 14px; }
     #status-percent { color: #008da9; font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    #status-progress { display: block; width: 100%; height: 9px; border: 0; border-radius: 9px; overflow: hidden; appearance: none; background: #e9f0f3; accent-color: #009db8; }
-    #status-progress::-webkit-progress-bar { background: #e9f0f3; border-radius: 9px; }
-    #status-progress::-webkit-progress-value { background: linear-gradient(90deg, #00b8c6, #008cae); border-radius: 9px; transition: width .12s linear; }
-    #status-progress::-moz-progress-bar { background: #009db8; border-radius: 9px; }
+    #status-progress { width: 100%; height: 9px; border-radius: 9px; overflow: hidden; background: #e9f0f3; }
+    /* Update the fill immediately: engine startup can block native progress animations. */
+    #status-progress-fill { width: var(--download-progress, 0%); height: 100%; border-radius: inherit; background: linear-gradient(90deg, #00b8c6, #008cae); }
+    #status[data-state="connecting"] #status-progress-fill, #status[data-state="loading"] #status-progress-fill { width: 35%; animation: indeterminate 1.2s ease-in-out infinite; }
+    #status[data-state="preparing"] #status-progress-fill { width: 100%; }
     #status-detail { min-height: 20px; margin: 13px 0 0; color: #738491; font-size: 12px; line-height: 1.6; font-variant-numeric: tabular-nums; }
     .spinner { flex: 0 0 auto; width: 12px; height: 12px; box-sizing: border-box; border: 2px solid #d9ebf0; border-top-color: #009db8; border-radius: 50%; animation: spin .85s linear infinite; }
     #status[data-state="download"] .spinner { display: none; }
@@ -33,7 +34,8 @@
     #status-retry:focus-visible { outline: 2px solid #008da9; outline-offset: 3px; }
     noscript { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 24px; background: #fff; color: #16283b; text-align: center; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } #status-progress::-webkit-progress-value { transition: none; } }
+    @keyframes indeterminate { from { transform: translateX(-100%); } to { transform: translateX(390%); } }
+    @media (prefers-reduced-motion: reduce) { .spinner, #status[data-state] #status-progress-fill { animation: none; } }
   </style>
   <link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
@@ -50,7 +52,7 @@
         <span class="stage-label"><span class="spinner" aria-hidden="true"></span><span id="status-stage" role="status">正在连接游戏资源</span></span>
         <span id="status-percent" aria-hidden="true">…</span>
       </div>
-      <progress id="status-progress" max="100" aria-label="游戏资源下载进度"></progress>
+      <div id="status-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="游戏资源下载进度"><div id="status-progress-fill"></div></div>
       <p id="status-detail">请保持页面打开</p>
       <button id="status-retry" type="button" hidden>重新加载</button>
     </section>
@@ -85,14 +87,15 @@
         if (!Number.isFinite(total) || total <= 0) {
           overlay.dataset.state = 'loading';
           stage.textContent = '正在下载游戏资源';
-          progress.removeAttribute('value');
+          progress.removeAttribute('aria-valuenow');
           progress.removeAttribute('aria-valuetext');
           percent.textContent = '…';
           detail.textContent = loaded > 0 ? `已下载 ${(loaded / 1000000).toFixed(1)} MB` : '请保持页面打开';
           return;
         }
         const ratio = Math.min(1, loaded / total);
-        progress.value = ratio * 100;
+        progress.style.setProperty('--download-progress', `${ratio * 100}%`);
+        progress.setAttribute('aria-valuenow', String(Math.floor(ratio * 100)));
         if (ratio < 1) {
           const value = Math.floor(ratio * 100);
           overlay.dataset.state = 'download';
@@ -103,9 +106,9 @@
         } else {
           overlay.dataset.state = 'preparing';
           stage.textContent = '正在准备游戏';
-          percent.textContent = '已下载';
+          percent.textContent = '100%';
           progress.setAttribute('aria-valuetext', '下载已完成，正在准备游戏');
-          detail.textContent = '资源已下载，正在完成启动';
+          detail.textContent = '下载完成，正在初始化游戏，请稍候';
         }
       }
 
